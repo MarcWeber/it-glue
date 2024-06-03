@@ -1,0 +1,393 @@
+TODO: make this nicer
+
+I have been programming for over 20 years, and it always takes a lot of time to
+assess or try out if software projects are easy to install. Manual README
+instructions are nice, but they don't compete with app stores.
+
+Installing, trying out, and deleting should also be easy for complex
+environments, but it isn't because there are many different operating systems,
+programming languages, and settings. At the same time, the world only changes
+slowly because new technologies don't yet have all the functions. So, there is
+always the desire to combine old and new techniques. This issue also arises
+with all programs that allow scripting languages. (Neo)Vim, Blender, Gimp,
+Krita are just a few well-known examples.
+
+IT Glue aims to redesign the relationships between projects and package
+databases flexibly so that installing, developing, and distributing packages is
+simple.
+
+Details:
+IT-glue replaces Github's README.md instructions with a script so that
+developers and users can easily compile, run, and update software. Native
+package managers of the platform will be used where appropriate.
+
+Developers are provided with further actions such as integrating into existing
+distribution paths and abstractions to save time. Additionally, collections [0]
+of software can be managed together so that mutual dependencies are managed by
+dev-glue up to the distribution.
+
+Similar to nixpkgs, there should be different ways to hash build results. For
+example, 'always current,' by 'binary compatibility,' or 'source
+compatibility.' Naturally, nixpkgs will also be seen as a native package
+manager and can be used alongside conda, brew, and others as a distribution
+path. This makes it possible to try out multiple platforms and toolchains
+simultaneously by separating source and build directories.
+
+The graph that maps the package dependencies can be used to 'update everything'
+or 'compile' everything. Like a "Ninja," but on a package level, which calls
+the package-specific build systems.
+
+By snapshotting known repositories like PyPi, it should be possible to achieve
+deterministic results as far as possible even without lock files. In words: Try
+to provide an environment as it would have been created at the time the author
+made their commit.
+
+It is so complicated because there are many operating systems [1], programming
+languages [2], language-specific [3] or distribution-specific [4] package
+managers, external libraries [6], distribution paths [7], and toolchains [8].
+
+Therefore, we need a tool that achieves the following goals:
+
+1) Can describe cross-language platform dependencies. Example: "Need OpenGL/Vulkan"
+
+2) Resolves Microservice vs. Monorepo.
+   A, B, C depend on each other, have the same version 2.0, and therefore create package.json automatically.
+
+3) Manage your own local package libraries:
+   Because the Github author didn't do it, check out X and assume it's version 2.0 with patch P.
+
+4) Provides scripts to, for example, recompile Firefox with Libjpeg or package for Chocolately/Conda.
+
+5) Reproducibility on different levels:
+   - Build path
+   - ABI compatibility
+   - Exact version and dependencies nixpkgs
+
+6) If possible, optionally specify an evaluation time when it comes to
+   resolving dependencies from known package databases like PyPi, Hackage, because
+   there are not always version lock files.
+
+  Example tasks in words that the system should be able to solve:
+
+   With packages from Ubuntu
+   With package list [github:user/repo-1, github:user/repo-2]
+   Find dependencies of repo-2, install Ubuntu packages
+   Provide build-all script.
+
+[0] Collections simply mean I have 30 small JavaScript/TypeScript repositories
+    and 10 websites or apps that need to work together and be maintained. So, for
+    example, they also get a common version. By defining the collection, mutual
+    dependencies are automatically recognized and 'package.json' files are created.
+    At the same time, common configurations for editors etc. can be provided. For
+    example, eslint.json configuration files.
+
+[1] (iOS, Linux, Windows, BSD, Android, iPhone, Cygwin, Msys, HarmonyOS, ...)
+
+[2] (Python, C, C++, Nim, Rust, Go, Ocaml, JS, TS, Lua, Vim, Perl, PHP, Dart, ...)
+
+[3] PyPy (Python), Hackage (Haskell), PHP (composer), Perl (perlpackages),
+    Lua, VimL, Emacs, ...
+    C/C++ (2-3 different ones)
+
+[4] nixpkgs (linux (flakes), Darwin)
+    pacman (msys, ...)
+    apt (ubuntu)
+    gentoo (...)
+    brew (OSX, also Linux)
+
+[6]
+    External libraries: Examples. OpenGL, Vulkan, proprietary machine learning
+    libraries from Intel, ...
+
+[7] Cross:
+    mamba/conda
+    Windows: Chocolately
+    opencv
+    C/C++ (3+)
+    Language leaders (Python: PyPi, PHP: Composer, Haskell: Hackage, ...)
+    OSX (less often also Linux): Brew
+    nixpkgs (Linux, Darwin, Nixos)
+    Linux: Nixos, Debian, Suse, Ubuntu, Gentoo, ...
+
+[8] Example C/C++ gcc, visual ccp, tinycc, clang, and the many embedded
+    Ruby: Ruby, JRuby, MRuby
+    Python: CPython, Mojo, CPython, IronPython, ...
+
+2) What social problem do you want to solve with your project?
+   Explain clearly what problem you want to address and relate the project idea to it.
+
+   I want to enable software programmers to create a description so that their
+   software can be reproduced and installed with minimal effort, so typical
+   README.md files on Github shrink to:
+
+   If the user is a developer, they have the option to control whose dependency
+   code they can edit and recompile via script. For example, prepare a
+   development environment by allowing me to edit Libjpeg and Firefox code with
+   a "compile everything and then start" script.
+
+3) How do you want to implement it technically?
+   Show that the applicants have already thought about the implementation of
+   the idea – the idea is not a quick shot. This does not mean that the project
+   must ultimately be implemented exactly as described.
+
+   The past has shown that declarative systems are good, but in the end,
+   programming elements were always added, like in Ansible.
+
+   Therefore, I want to use a programming language like TS/Rust from the start
+   to create a modular flexible system that adapts to the task.
+
+   Here is a more complex example that shows how libraries are cloned from
+   Github, then included in a temporary own package list, and resolved for
+   dependencies. For each package, it can be specified whether it is to be
+   built with cmake, scons. At the same time, the strength of a programming
+   language is evident because you can define git_mit_themen_zweig once, which
+   is more efficient than a declarative approach.
+
+   In the end, scripts are defined that compile the target over several
+   libraries and for 2 Godot versions.
+
+   The flexibility is evident because the result is a list of actions. This can
+   be expanded at will.
+
+    story_name   = "godotvnc-update"
+
+    git_mit_themen_zweig = (repo) => git({repo, upload_to: my_bare_location, story-branch-name: story_name })
+    openssl      = git_with_topic_branch('x/libopenssl')
+    libjpeg      = git_with_topic_branch('x/libjpeg')
+    libpng       = git_with_topic_branch('x/libpng')
+
+    godot_cpp_headers_4  = git:('x/godot_cpp_headers_4', upload_to: my_bare_location, master as story_name)
+    godot_cpp_headers_3  = git:('x/godot_cpp_headers_3', upload_to: my_bare_location, master as story_name)
+
+    godot_vnc_master = git_from_my_repo('xx', {initialize_from: 'github:a/b'})
+    hack_on_godot_3_vnc = godot_vnc_master.worktree_branch('fix_godot_3_vnc')
+    hack_on_godot_4_vnc = godot_vnc_master.worktree_branch('fix_godot_4_vnc')
+
+    packages = [
+      autoconf(openssl, ...),
+      cmake(libjpeg, ...),
+      cmake(libpng, ...),
+      nixpkgs("scons")
+    ]
+
+    env_hack_on_godot_3 = solve(...)
+
+    env_hack_on_godot_4 = solve(...)
+
+    actions = {
+      "info": info about paths etc?
+      build_all = build_all(env_hack_on_godot_3, env_hack_on_godot_4)
+    }
+
+4) What similar solutions already exist and what will your project do differently or better?
+
+   Gentoo: Uses shell scripts but only supports its own Linux.
+   scons/mamba. They have .yaml files. Configuration files are too complicated
+   if you want to test entire dependency chains with different toolchains.
+
+   Nixpkgs: Linux/Darwin only. Perfect distribution, but not helpful for the developer.
+
+   Github Build hooks. These do not unify dependencies.
+
+   Arduino IDE: No comparison.
+
+   Maven/pip/...(20x) -> Only Java/Python/...
+
+5) Reproducibility on different levels:
+   - Build path
+   - ABI compatibility
+   - Exact version and dependencies nixpkgs
+
+6) If possible, optionally specify an evaluation time when it comes to
+    resolving dependencies from known package databases like PyPi, Hackage, because
+    there are not always version lock files.
+
+Example tasks in words that the system should be able to solve:
+
+   With packages from Ubuntu
+   With package list [github:user/repo-1, github:user/repo-2]
+   Find dependencies of repo-2, install Ubuntu packages
+   Provide build-all script.
+
+[0] Collections simply mean I have 30 small JavaScript/TypeScript repositories
+    and 10 websites or apps that need to work together and be maintained. So, for
+    example, they also get a common version. By defining the collection, mutual
+    dependencies are automatically recognized and 'package.json' files are created.
+    At the same time, common configurations for editors etc. can be provided. For
+    example, eslint.json configuration files.
+
+[1] (iOS, Linux, Windows, BSD, Android, iPhone, Cygwin, Msys, HarmonyOS, ...)
+
+[2] (Python, C, C++, Nim, Rust, Go, Ocaml, JS, TS, Lua, Vim, Perl, PHP, Dart, ...)
+
+[3] PyPy (Python), Hackage (Haskell), PHP (composer), Perl (perlpackages),
+    Lua, VimL, Emacs, ...
+    C/C++ (2-3 different ones)
+
+[4] nixpkgs (linux (flakes), Darwin)
+    pacman (msys, ...)
+    apt (ubuntu)
+    gentoo (...)
+    brew (OSX, also Linux)
+
+[6]
+    External libraries: Examples. OpenGL, Vulkan, proprietary machine learning
+    libraries from Intel, ...
+
+[7] Cross:
+    mamba/conda
+    Windows: Chocolately
+    opencv
+    C/C++ (3+)
+    Language leaders (Python: PyPi, PHP: Composer, Haskell: Hackage, ...)
+    OSX (less often also Linux): Brew
+    nixpkgs (Linux, Darwin, Nixos)
+    Linux: Nixos, Debian, Suse, Ubuntu, Gentoo, ...
+
+[8] Example C/C++ gcc, visual ccp, tinycc, clang, and the many embedded
+    Ruby: Ruby, JRuby, MRuby
+    Python: CPython, Mojo, CPython, IronPython, ...
+
+2) What social problem do you want to solve with your project?
+   Explain clearly what problem you want to address and relate the project idea to it.
+
+   I want to enable software programmers to create a description so that their
+   software can be reproduced and installed with minimal effort, so typical
+   README.md files on Github shrink to:
+
+   If the user is a developer, they have the option to control whose dependency
+   code they can edit and recompile via script. For example, prepare a
+   development environment by allowing me to edit Libjpeg and Firefox code with
+   a "compile everything and then start" script.
+
+3) How do you want to implement it technically?
+
+   Show that the applicants have already thought about the implementation of
+   the idea – the idea is not a quick shot. This does not mean that the project
+   must ultimately be implemented exactly as described.
+
+   The past has shown that declarative systems are good, but in the end,
+   programming elements were always added, like in Ansible.
+
+   Therefore, I want to use a programming language like TS/Rust from the start
+   to create a modular flexible system that adapts to the task.
+
+   Here is a more complex example that shows how libraries are cloned from
+   Github, then included in a temporary own package list, and resolved for
+   dependencies. For each package, it can be specified whether it is to be
+   built with cmake, scons. At the same time, the strength of a programming
+   language is evident because you can define git_mit_themen_zweig once, which
+   is more efficient than a declarative approach.
+
+   In the end, scripts are defined that compile the target over several
+   libraries and for 2 Godot versions.
+
+   The flexibility is evident because the result is a list of actions. This can
+   be expanded at will.
+
+    story_name   = "godotvnc-update"
+
+    git_mit_themen_zweig = (repo) => git({repo, upload_to: my_bare_location, story-branch-name: story_name })
+    openssl      = git_mit_themen_zweig('x/libopenssl')
+    libjpeg      = git_mit_themen_zweig('x/libjpeg')
+    libpng       = git_mit_themen_zweig('x/libpng')
+
+    godot_cpp_headers_4  = git:('x/godot_cpp_headers_4', upload_to: my_bare_location, master as story_name)
+    godot_cpp_headers_3  = git:('x/godot_cpp_headers_3', upload_to: my_bare_location, master as story_name)
+
+    godot_vnc_master = git_from_my_repo('xx', {initialize_from: 'github:a/b'})
+    hack_on_godot_3_vnc = godot_vnc_master.worktree_branch('fix_godot_3_vnc')
+    hack_on_godot_4_vnc = godot_vnc_master.worktree_branch('fix_godot_4_vnc')
+
+    packages = [
+      autoconf(openssl, ...),
+      cmake(libjpeg, ...),
+      cmake(libpng, ...),
+      nixpkgs("scons")
+    ]
+
+    env_hack_on_godot_3 = solve(...)
+
+    env_hack_on_godot_4 = solve(...)
+
+    actions = {
+      "info": info about paths etc?
+      build_all = build_all(env_hack_on_godot_3, env_hack_on_godot_4)
+    }
+
+
+4) What similar solutions already exist and what will your project do differently or better?
+
+  Nixos.org/Nixpkgs: Nur Linux/Drawin aber nicht abstrakt genug
+  Ansible/Chef/..: Nicht abstrakt genug, weil sie keine Solver eingebaut haben
+  Chocolately && : nur Binary distribution
+  Conda/Xmake etc -> fokussiert auf Dist-Pakete, aber die Abstraktion diese
+                Dist-Pakete zu erstellen ist was IT-Glue ausmachen wird.
+
+   Gentoo: shell scripts ?
+
+   scons/mamba: .yaml files. If you want to express complicated dependencies
+    with options (what C compiler) and dependencies seems too complicated
+
+   Nixpkgs: Linux/Darwin only. Perfect distribution, but only partially for
+    devs if you want to hack on 3 dependencies at the same time!
+
+   Github Build hooks. Loosely related but you cannot hack and rebuild easily
+
+   Arduino IDE: .. 
+
+   Maven/pip/...(20x) -> Nur Java/Python/...
+
+5) Who is the target audience and how will your tool reach them?
+   Show that the project ideas potentially have a broad societal reach and that
+   the applicants understand what will be particularly important in developing
+   their software. The measures to reach the target audience show that the
+   applicants have thought about the spread and use of the software.
+
+   I have exactly three target groups:
+
+   1) Users who want to install software or collections.
+   2) Users who want to try out software.
+   3) Developers who want to program with it.
+
+   Users who want to install software or collections:
+   You search for an application and get a list of systems or dependencies that
+   are needed. You have the option to modify parameters if the developer has
+   defined these.
+
+   Users who want to try out software:
+   You check the description and install software with one command.
+
+   Developers who want to program with it:
+   It is determined what system they have and what is needed. Optionally: Which compiler etc.
+   Then a development environment is created.
+
+
+
+Rough estimation of effort:
+
+  Hard to judge. Assuming 2 days for each item. Listing items ..
+
+  Components to be integrated:
+
+  Package sources (9) Nixpkgs, apt, chocolately, scoop, winget, gentoo, pacman, gentoo, conda, Random (e.g., Github)
+  Package distros (9)
+
+  6 OSX, Ubuntu, Nixos, Windows, BSD, (Webassembly?)
+  24 VC++, gcc, clang, other C compilers 3x, Ruby, Python, Dart, Java, Perl, Zig, Nim, OCaml, GHC, Haxe, Android, Rust, OCaml, Elm, Scala, Zig, Pascal, BuckleScript / Reason
+  6 5x JVM, .net (x5), Flutter
+  2 solver, GC,
+  12 VisualStudio, brew, nixpkgs, nix-flakes, pip, rubyforge, mavencentral, hackage, 4+
+  6 Mysql, Apache, Postgresql, Rethinkdb, DuckDb, MariaDb
+  8 Vscode & Plugins, Emacs & Plugins, NeoVim & Plugins, AndroidStudio Plugins?
+  7 cmake, make, nmake, ivy, ant, xmake, Ninja
+  3 git, mercurial,
+  5 docker, VirtualBox, lxc, ..
+  3 Nvidia / OpenGL / VR (Steam & Oculus)
+  Actions 5) create/delete DB, open browser/editor, rebuild-all, publish
+
+  Random (4: GTK, QT, Man, info, ...
+
+  9 + 9 + 6 + 24 + 6 + 2 + 12 + 6 + 8 + 7 + 3 + 5 + 3 + 4 = 104
+
+  So will take at least 204 days

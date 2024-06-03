@@ -1,5 +1,9 @@
 # it-glue
-Cross platform cross language cross DSL to setup computers and dev environments
+Cross platform cross language cross DSL to setup computers and dev environments.
+This includes a cross language and cross platform dependency solver honoring
+native package managers if possible.
+
+[details](./details.txt)
 
 # analogies
 
